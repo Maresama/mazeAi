@@ -40,10 +40,40 @@
   border-radius: 20%;
 }
 
-.player {
+/* .player {
   width: 20px;
   height: 20px;
-  background-color: crimson;
-  border: 1px solid black;
-  border-radius: 100%;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 20px solid red;
+} */
+
+.triangle {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.up {
+  border-right: 10px solid transparent;
+  border-bottom: 15px solid red;
+  border-left: 10px solid transparent;
+}
+
+.right {
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 15px solid red;
+}
+
+.down {
+  border-top: 15px solid red;
+  border-right: 10px solid transparent;
+  border-left: 10px solid transparent;
+}
+
+.left {
+  border-top: 10px solid transparent;
+  border-right: 15px solid red;
+  border-bottom: 10px solid transparent;
 }

@@ -1,13 +1,14 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './page.module.css';
 
 //4方向
+
 const directions = [
-  [-1, 0],
-  [0, -1],
-  [0, 1],
-  [1, 0],
+  [-1, 0], // 0: 上（north）
+  [0, 1], // 1: 右（east）
+  [1, 0], // 2: 下（south）
+  [0, -1], // 3: 左（west）
 ];
 
 const WIDTH = 21;
@@ -62,66 +63,80 @@ const makeMaze = (WIDTH: number, HEIGHT: number): number[][] => {
   }
   maze[HEIGHT - 2][WIDTH - 2] = 0;
 
-  // ゴール手前に通路がなければ1マス破壊
-  const gy = HEIGHT - 1;
-  const gx = WIDTH - 1;
-
-  maze[gy][gx] = 0;
-
   // ゴールの上下左右のどこかが通路ならOK
   const connected = directions.some(([dy, dx]) => {
-    const ny = gy + dy;
-    const nx = gx + dx;
+    const ny = goalY + dy;
+    const nx = goalX + dx;
     return ny >= 0 && ny < HEIGHT && nx >= 0 && nx < WIDTH && maze[ny][nx] === 0;
   });
 
   // もしつながっていなければ、強制的に上のマスを通路にする（例）
-  if (!connected && gy > 0) {
-    maze[gy - 1][gx] = 0;
+  if (!connected && goalY > 0) {
+    maze[goalY - 1][goalX] = 0;
   }
   return maze;
 };
 
-//１のマスの周り一つを０から１に変更
-// const makeMaze = (board: number[][]) => {
-//   //コピー
-//   const newBoard = board.map((row) => [...row]);
+// 左手法の方向の優先順（左→前→右→後ろ）
+const priorityDirections = (currentDir: number): number[] => {
+  return [
+    (currentDir + 3) % 4, // 左
+    currentDir, // 前
+    (currentDir + 1) % 4, // 右
+    (currentDir + 2) % 4, // 後ろ
+  ];
+};
+//左手法
+const leftHandStep = (
+  pos: [number, number],
+  currentDir: number,
+  board: number[][],
+): { nextPos: [number, number]; nextCurrentDir: number } => {
+  const options = priorityDirections(currentDir);
+  for (const d of options) {
+    const [dy, dx] = directions[d];
+    const [y, x] = pos;
+    const ny = y + dy;
+    const nx = x + dx;
+    if (ny >= 0 && ny < board[0].length && nx >= 0 && nx < board[0].length && board[ny][nx] === 0) {
+      return {
+        nextPos: [ny, nx],
+        nextCurrentDir: d,
+      };
+    }
+  }
 
-//   for (let y = 0; y < newBoard.length; y++) {
-//     for (let x = 0; x < newBoard[0].length; x++) {
-//       if (newBoard[y][x] === 1) {
-//         //０を入れる箱
-//         const candidates: [number, number][] = [];
-
-//         for (const [dx, dy] of directions) {
-//           const cx = x + dx;
-//           const cy = y + dy;
-//           if (
-//             cy >= 0 &&
-//             cy < newBoard.length &&
-//             cx >= 0 &&
-//             cx < newBoard[0].length &&
-//             newBoard[cy][cx] === 0
-//           ) {
-//             candidates.push([cx, cy]);
-//           }
-//         }
-//         if (candidates.length > 0) {
-//           const [cx, cy] = candidates[Math.floor(Math.random() * candidates.length)];
-//           newBoard[cy][cx] = 1;
-//         }
-//       }
-//     }
-//   }
-//   return newBoard;
-// };
+  return { nextPos: pos, nextCurrentDir: currentDir };
+};
 
 export default function Home() {
+  const [started, setStarted] = useState(false);
   const [board, setBoard] = useState(() => makeMaze(WIDTH, HEIGHT));
+  const [playerPos, setPlayerPos] = useState<[number, number]>([0, 0]);
+  const [playerDir, setPlayerDir] = useState<number>(1); // 初期向き：右
   console.log(board);
+
   const handleClick = () => {
-    setBoard(makeMaze(WIDTH, HEIGHT));
+    const newBoard = makeMaze(WIDTH, HEIGHT);
+    setBoard(newBoard);
+    setPlayerPos([0, 0]);
+    setPlayerDir(1);
+    setStarted(true);
   };
+
+  useEffect(() => {
+    if (!started) return;
+    const interval = setInterval(() => {
+      const { nextPos, nextCurrentDir } = leftHandStep(playerPos, playerDir, board);
+      setPlayerPos(nextPos);
+      setPlayerDir(nextCurrentDir);
+      if (nextPos[0] === HEIGHT - 1 && nextPos[1] === WIDTH - 1) {
+        clearInterval(interval);
+        setStarted(false);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [started, playerPos, playerDir, board]);
 
   return (
     <div className={styles.container}>
@@ -130,17 +145,36 @@ export default function Home() {
           <p>start</p>
         </button>
       </div>
-      <div className={styles.board}>
-        {board.map((row, y) =>
-          row.map((cell, x) => (
-            <div
-              key={`${x}-${y}`}
-              className={styles.cell}
-              style={{ backgroundColor: cell === 1 ? '#111111' : '#ffffff' }}
-            />
-          )),
-        )}
-      </div>
+      {started ? (
+        <div className={styles.board}>
+          {board.map((row, y) =>
+            row.map((cell, x) => {
+              const isPlayer = playerPos[0] === y && playerPos[1] === x;
+              const directionClass = ['up', 'right', 'down', 'left'][playerDir];
+              return (
+                <div
+                  key={`${x}-${y}`}
+                  className={styles.cell}
+                  style={{
+                    backgroundColor:
+                      x === 0 && y === 0
+                        ? 'green'
+                        : x === WIDTH - 1 && y === HEIGHT - 1
+                          ? 'red'
+                          : cell === 1
+                            ? '#111'
+                            : '#fff',
+                  }}
+                >
+                  {isPlayer && <div className={`triangle ${styles[directionClass]}`} />}
+                </div>
+              );
+            }),
+          )}
+        </div>
+      ) : (
+        <p>ボタンを押して迷路を生成してください</p>
+      )}
     </div>
   );
 }
