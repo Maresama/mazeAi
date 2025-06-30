@@ -166,7 +166,7 @@ export default function Home() {
                             : '#fff',
                   }}
                 >
-                  {isPlayer && <div className={`triangle ${styles[directionClass]}`} />}
+                  <div className={`triangle ${directionClass}`} />
                 </div>
               );
             }),
