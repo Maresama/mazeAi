@@ -151,6 +151,14 @@ export default function Home() {
             row.map((cell, x) => {
               const isPlayer = playerPos[0] === y && playerPos[1] === x;
               const directionClass = ['up', 'right', 'down', 'left'][playerDir];
+              const styleClass =
+                directionClass === 'up'
+                  ? styles.up
+                  : directionClass === 'right'
+                    ? styles.right
+                    : directionClass === 'down'
+                      ? styles.down
+                      : styles.left;
               return (
                 <div
                   key={`${x}-${y}`}
@@ -166,7 +174,7 @@ export default function Home() {
                             : '#fff',
                   }}
                 >
-                  <div className={`triangle ${directionClass}`} />
+                  {isPlayer && <div className={`${styles.triangle} ${styleClass}`} />}
                 </div>
               );
             }),
